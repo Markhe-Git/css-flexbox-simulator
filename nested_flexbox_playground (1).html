@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nested Flexbox Builder & Tree Simulator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    code, pre {
+      font-family: 'Fira Code', monospace;
+    }
+    .bg-grid-pattern {
+      background-size: 24px 24px;
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    }
+    .nested-container {
+      transition: all 0.15s ease-in-out;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #090d16;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
+
+  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="p-2 bg-indigo-600/20 text-indigo-400 rounded-xl border border-indigo-500/30 shadow-inner">
+          <i data-lucide="network" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold text-white tracking-tight flex items-center space-x-2">
+            <span>Nested Flexbox Builder</span>
+            <span class="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">v4.0</span>
+          </h1>
+          <p class="text-xs text-slate-400 hidden sm:block">Construct multi-level flexbox layouts with customizable node naming</p>
+        </div>
+      </div>
+      
+      <!-- Presets Selector & Global Actions -->
+      <div class="flex items-center space-x-2 overflow-x-auto py-1">
+        <button onclick="loadPreset('appShell')" class="px-2.5 py-1.5 text-xs font-medium bg-slate-800 hover:bg-emerald-600/30 hover:border-emerald-500/50 text-slate-300 hover:text-white rounded-lg border border-slate-700 transition-all flex items-center space-x-1 whitespace-nowrap">
+          <i data-lucide="panel-left" class="w-3.5 h-3.5 text-emerald-400"></i>
+          <span>App Shell</span>
+        </button>
+        <button onclick="loadPreset('holyGrail')" class="px-2.5 py-1.5 text-xs font-medium bg-slate-800 hover:bg-indigo-600/30 hover:border-indigo-500/50 text-slate-300 hover:text-white rounded-lg border border-slate-700 transition-all flex items-center space-x-1 whitespace-nowrap">
+          <i data-lucide="layout-template" class="w-3.5 h-3.5 text-indigo-400"></i>
+          <span>Holy Grail</span>
+        </button>
+        <button onclick="loadPreset('cardDashboard')" class="px-2.5 py-1.5 text-xs font-medium bg-slate-800 hover:bg-amber-600/30 hover:border-amber-500/50 text-slate-300 hover:text-white rounded-lg border border-slate-700 transition-all flex items-center space-x-1 whitespace-nowrap">
+          <i data-lucide="layout-dashboard" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span>Dashboard</span>
+        </button>
+        <button onclick="resetTree()" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 border border-transparent hover:border-slate-700 transition-colors" title="Reset Root Container">
+          <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- LEFT COLUMN: Node Inspector & Hierarchy Tree -->
+    <section class="lg:col-span-5 flex flex-col space-y-4">
+      
+      <!-- Node Inspector Panel -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-2xl flex flex-col max-h-[calc(100vh-140px)]">
+        
+        <!-- Selection Header & Action Controls -->
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div class="flex items-center space-x-2 truncate">
+            <span id="selected-type-badge" class="px-2 py-0.5 text-[10px] uppercase font-bold rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Container</span>
+            <span id="selected-node-title" class="font-bold text-sm text-slate-100 truncate">Root Container</span>
+          </div>
+          <div class="flex items-center space-x-1">
+            <button onclick="addChildContainer()" title="Add Sub Container inside selected node" class="px-2.5 py-1 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/30 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1">
+              <i data-lucide="folder-plus" class="w-3.5 h-3.5"></i>
+              <span>+ Container</span>
+            </button>
+            <button onclick="addLeafItem()" title="Add Child Item inside selected node" class="px-2.5 py-1 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/30 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1">
+              <i data-lucide="box" class="w-3.5 h-3.5"></i>
+              <span>+ Item</span>
+            </button>
+            <button id="btn-delete-node" onclick="deleteSelectedNode()" title="Delete Selected Node" class="p-1 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Dynamic Breadcrumb Trail -->
+        <div id="breadcrumb-container" class="flex items-center space-x-1 text-xs text-slate-400 py-2 border-b border-slate-800/60 overflow-x-auto whitespace-nowrap">
+          <!-- Dynamic Breadcrumb Links Injected Here -->
+        </div>
+
+        <!-- Inspector Tabs Switcher -->
+        <div class="flex items-center border-b border-slate-800 mt-2">
+          <button id="tab-btn-properties" onclick="switchInspectorTab('properties')" class="px-4 py-2 text-xs font-semibold text-indigo-400 border-b-2 border-indigo-500">Properties</button>
+          <button id="tab-btn-tree" onclick="switchInspectorTab('tree')" class="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-slate-200 border-b-2 border-transparent">Hierarchy Tree</button>
+        </div>
+
+        <!-- TAB 1: PROPERTIES EDITOR -->
+        <div id="tab-content-properties" class="flex-1 overflow-y-auto space-y-3.5 py-3 pr-1">
+          
+          <!-- Renaming Control -->
+          <div class="space-y-1 p-3 bg-slate-950/70 rounded-xl border border-indigo-500/30">
+            <label class="text-[11px] font-bold text-indigo-400 uppercase tracking-wider flex items-center justify-between">
+              <span>Node Name / Custom Label</span>
+              <i data-lucide="edit-3" class="w-3 h-3 text-indigo-400"></i>
+            </label>
+            <input type="text" id="prop-label" oninput="updateNodeProperty('label', this.value)" placeholder="e.g. Navigation Header, Sidebar Card" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white font-medium focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+            <p class="text-[10px] text-slate-400">Custom names update class names in the exported HTML & CSS code.</p>
+          </div>
+
+          <!-- Flex Item Rules (In Parent) -->
+          <div id="item-self-properties" class="p-3 bg-slate-950/60 rounded-xl border border-slate-800 space-y-2">
+            <span class="text-xs font-bold text-slate-300 flex items-center space-x-1">
+              <i data-lucide="move" class="w-3.5 h-3.5 text-emerald-400"></i>
+              <span>Flex Child Rules (In Parent Container)</span>
+            </span>
+
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <div>
+                <label class="text-[10px] text-slate-400">flex-grow</label>
+                <input type="number" id="prop-grow" min="0" value="0" onchange="updateNodeProperty('grow', parseInt(this.value)||0)" class="w-full bg-slate-900 border border-slate-700 rounded-md px-2 py-1 text-slate-200 font-mono text-xs">
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400">flex-shrink</label>
+                <input type="number" id="prop-shrink" min="0" value="1" onchange="updateNodeProperty('shrink', parseInt(this.value)||0)" class="w-full bg-slate-900 border border-slate-700 rounded-md px-2 py-1 text-slate-200 font-mono text-xs">
+              </div>
+              <div class="col-span-2">
+                <label class="text-[10px] text-slate-400">flex-basis</label>
+                <select id="prop-basis" onchange="updateNodeProperty('basis', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-md px-2 py-1 text-slate-200 text-xs">
+                  <option value="auto">auto</option>
+                  <option value="0px">0px</option>
+                  <option value="120px">120px</option>
+                  <option value="200px">200px</option>
+                  <option value="25%">25%</option>
+                  <option value="33.33%">33.33%</option>
+                  <option value="50%">50%</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400">align-self</label>
+                <select id="prop-alignSelf" onchange="updateNodeProperty('alignSelf', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-md px-2 py-1 text-slate-200 text-xs">
+                  <option value="auto">auto</option>
+                  <option value="flex-start">flex-start</option>
+                  <option value="center">center</option>
+                  <option value="flex-end">flex-end</option>
+                  <option value="stretch">stretch</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400">order</label>
+                <input type="number" id="prop-order" value="0" onchange="updateNodeProperty('order', parseInt(this.value)||0)" class="w-full bg-slate-900 border border-slate-700 rounded-md px-2 py-1 text-slate-200 font-mono text-xs">
+              </div>
+            </div>
+          </div>
+
+          <!-- DIMENSIONS EDITOR (vw, vh, px, %, rem, auto) -->
+          <div class="p-3 bg-slate-950/60 rounded-xl border border-indigo-500/30 space-y-2">
+            <span class="text-xs font-bold text-indigo-400 flex items-center space-x-1">
+              <i data-lucide="ruler" class="w-3.5 h-3.5"></i>
+              <span>Dimensions (vw, vh, px, %, rem, auto)</span>
+            </span>
+
+            <!-- Width Control -->
+            <div class="space-y-1">
+              <div class="flex justify-between text-[11px] text-slate-400">
+                <span>Width:</span>
+                <span id="display-width-summary" class="font-mono text-indigo-300">100%</span>
+              </div>
+              <div class="grid grid-cols-12 gap-1.5">
+                <select id="width-mode-select" onchange="handleDimensionModeChange('width', this.value)" class="col-span-4 bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-md px-2 py-1">
+                  <option value="auto">auto</option>
+                  <option value="100%">100%</option>
+                  <option value="custom">Custom</option>
+                </select>
+                <input type="number" id="width-val-input" value="100" min="1" oninput="handleDimensionValueChange('width')" class="col-span-5 bg-slate-900 border border-slate-700 rounded-md px-2 py-1 text-right font-mono text-xs text-slate-200">
+                <select id="width-unit-select" onchange="handleDimensionValueChange('width')" class="col-span-3 bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-md px-1.5 py-1 font-mono">
+                  <option value="%">%</option>
+                  <option value="px">px</option>
+                  <option value="vw">vw</option>
+                  <option value="vh">vh</option>
+                  <option value="rem">rem</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Height Control -->
+            <div class="space-y-1">
+              <div class="flex justify-between text-[11px] text-slate-400">
+                <span>Height:</span>
+                <span id="display-height-summary" class="font-mono text-indigo-300">auto</span>
+              </div>
+              <div class="grid grid-cols-12 gap-1.5">
+                <select id="height-mode-select" onchange="handleDimensionModeChange('height', this.value)" class="col-span-4 bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-md px-2 py-1">
+                  <option value="auto">auto</option>
+                  <option value="100%">100%</option>
+                  <option value="custom">Custom</option>
+                </select>
+                <input type="number" id="height-val-input" value="300" min="1" oninput="handleDimensionValueChange('height')" class="col-span-5 bg-slate-900 border border-slate-700 rounded-md px-2 py-1 text-right font-mono text-xs text-slate-200">
+                <select id="height-unit-select" onchange="handleDimensionValueChange('height')" class="col-span-3 bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-md px-1.5 py-1 font-mono">
+                  <option value="px">px</option>
+                  <option value="vh">vh</option>
+                  <option value="vw">vw</option>
+                  <option value="%">%</option>
+                  <option value="rem">rem</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- CONTAINER FLEXBOX CONTROLS -->
+          <div id="container-properties-group" class="space-y-3">
+
+            <!-- Flex Direction Buttons -->
+            <div class="p-3 bg-slate-950/60 rounded-xl border border-indigo-500/30 space-y-2">
+              <div class="flex justify-between items-center text-xs">
+                <span class="font-bold text-indigo-400 flex items-center space-x-1">
+                  <i data-lucide="arrow-right-left" class="w-3.5 h-3.5"></i>
+                  <span>flex-direction</span>
+                </span>
+                <span id="label-flexDirection" class="font-mono text-indigo-300">row</span>
+              </div>
+
+              <div class="grid grid-cols-2 gap-1.5">
+                <button onclick="updateNodeProperty('flexDirection', 'row')" id="btn-dir-row" class="dir-opt-btn px-2 py-1.5 text-xs rounded-lg border transition-all flex items-center justify-center space-x-1">
+                  <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                  <span>row</span>
+                </button>
+                <button onclick="updateNodeProperty('flexDirection', 'row-reverse')" id="btn-dir-row-reverse" class="dir-opt-btn px-2 py-1.5 text-xs rounded-lg border transition-all flex items-center justify-center space-x-1">
+                  <i data-lucide="arrow-left" class="w-3 h-3"></i>
+                  <span>row-rev</span>
+                </button>
+                <button onclick="updateNodeProperty('flexDirection', 'column')" id="btn-dir-column" class="dir-opt-btn px-2 py-1.5 text-xs rounded-lg border transition-all flex items-center justify-center space-x-1">
+                  <i data-lucide="arrow-down" class="w-3 h-3"></i>
+                  <span>column</span>
+                </button>
+                <button onclick="updateNodeProperty('flexDirection', 'column-reverse')" id="btn-dir-column-reverse" class="dir-opt-btn px-2 py-1.5 text-xs rounded-lg border transition-all flex items-center justify-center space-x-1">
+                  <i data-lucide="arrow-up" class="w-3 h-3"></i>
+                  <span>col-rev</span>
+                </button>
+              </div>
+
+              <!-- Main/Cross Axis Description -->
+              <div class="p-2 bg-slate-900 rounded-lg border border-slate-800 text-[11px] space-y-0.5">
+                <div class="flex justify-between">
+                  <span class="text-indigo-400 font-mono">Main Axis:</span>
+                  <span id="axis-main-label" class="text-slate-200">Left → Right</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-emerald-400 font-mono">Cross Axis:</span>
+                  <span id="axis-cross-label" class="text-slate-200">Top → Bottom</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Alignments & Spacing -->
+            <div class="p-3 bg-slate-950/60 rounded-xl border border-slate-800 space-y-2">
+              <div>
+                <label class="text-[11px] font-semibold text-slate-300">justify-content</label>
+                <select id="prop-justifyContent" onchange="updateNodeProperty('justifyContent', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-md px-2.5 py-1.5 text-xs text-slate-200 mt-1">
+                  <option value="flex-start">flex-start</option>
+                  <option value="center">center</option>
+                  <option value="flex-end">flex-end</option>
+                  <option value="space-between">space-between</option>
+                  <option value="space-around">space-around</option>
+                  <option value="space-evenly">space-evenly</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="text-[11px] font-semibold text-slate-300">align-items</label>
+                <select id="prop-alignItems" onchange="updateNodeProperty('alignItems', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-md px-2.5 py-1.5 text-xs text-slate-200 mt-1">
+                  <option value="stretch">stretch</option>
+                  <option value="flex-start">flex-start</option>
+                  <option value="center">center</option>
+                  <option value="flex-end">flex-end</option>
+                  <option value="baseline">baseline</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="text-[11px] font-semibold text-slate-300">flex-wrap</label>
+                <select id="prop-flexWrap" onchange="updateNodeProperty('flexWrap', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-md px-2.5 py-1.5 text-xs text-slate-200 mt-1">
+                  <option value="nowrap">nowrap</option>
+                  <option value="wrap">wrap</option>
+                  <option value="wrap-reverse">wrap-reverse</option>
+                </select>
+              </div>
+
+              <!-- Gap -->
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <span class="font-semibold text-slate-300">gap</span>
+                  <span id="display-gap-val" class="font-mono text-indigo-300">12px</span>
+                </div>
+                <input type="range" id="prop-gap" min="0" max="48" value="12" step="2" oninput="updateNodeProperty('gap', parseInt(this.value)||0)" class="w-full accent-indigo-500 bg-slate-800 h-1.5 rounded-lg appearance-none cursor-pointer">
+              </div>
+
+              <!-- Padding -->
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <span class="font-semibold text-slate-300">inner padding</span>
+                  <span id="display-padding-val" class="font-mono text-indigo-300">16px</span>
+                </div>
+                <input type="range" id="prop-padding" min="8" max="64" value="20" step="2" oninput="updateNodeProperty('padding', parseInt(this.value)||0)" class="w-full accent-indigo-500 bg-slate-800 h-1.5 rounded-lg appearance-none cursor-pointer">
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- TAB 2: HIERARCHY TREE VIEW -->
+        <div id="tab-content-tree" class="flex-1 overflow-y-auto py-3 hidden">
+          <div id="tree-nodes-container" class="space-y-1 relative pl-2">
+            <!-- Dynamic Recursive Tree Nodes -->
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- RIGHT COLUMN: Visual Canvas & Clean Code Exporter -->
+    <section class="lg:col-span-7 flex flex-col space-y-5">
+
+      <!-- Visual Canvas Card -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-2xl flex flex-col min-h-[520px] bg-grid-pattern relative">
+        
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+          <div class="flex items-center space-x-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <h2 class="text-xs font-mono font-bold text-slate-300 uppercase tracking-wider">Nested Visual Layout Canvas</h2>
+          </div>
+          <span id="tree-depth-indicator" class="text-xs font-mono text-indigo-300 bg-indigo-950 border border-indigo-500/30 px-2.5 py-0.5 rounded-full">
+            Nesting Depth: 1
+          </span>
+        </div>
+
+        <!-- Canvas Root Container -->
+        <div class="flex-1 flex items-start justify-center overflow-auto w-full p-1">
+          <div id="visual-canvas-root" class="w-full h-full transition-all">
+            <!-- Dynamic Nested HTML Rendered Here -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Exported HTML & CSS Code Panel -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="code" class="w-4 h-4 text-indigo-400"></i>
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Generated Clean HTML & CSS</h3>
+          </div>
+          <button onclick="copyExportedCode()" class="px-3 py-1 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 transition-colors flex items-center space-x-1.5">
+            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+            <span id="copy-btn-label">Copy Code</span>
+          </button>
+        </div>
+
+        <div class="relative bg-slate-950 p-3.5 rounded-xl border border-slate-800 font-mono text-xs text-slate-300 overflow-x-auto max-h-[240px]">
+          <pre id="code-output-block"></pre>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <script>
+    // Visual styling presets per nesting level
+    const LEVEL_STYLES = [
+      { border: 'border-indigo-500/60', bg: 'bg-indigo-950/20', headerBg: 'bg-indigo-950/80', text: 'text-indigo-300' },
+      { border: 'border-emerald-500/60', bg: 'bg-emerald-950/20', headerBg: 'bg-emerald-950/80', text: 'text-emerald-300' },
+      { border: 'border-amber-500/60', bg: 'bg-amber-950/20', headerBg: 'bg-amber-950/80', text: 'text-amber-300' },
+      { border: 'border-purple-500/60', bg: 'bg-purple-950/20', headerBg: 'bg-purple-950/80', text: 'text-purple-300' },
+      { border: 'border-rose-500/60', bg: 'bg-rose-950/20', headerBg: 'bg-rose-950/80', text: 'text-rose-300' }
+    ];
+
+    // Main State Object
+    let treeState = {
+      selectedId: 'root',
+      nextIdCounter: 1,
+      root: createContainerNode('root', 'Root Container', {
+        flexDirection: 'column',
+        justifyContent: 'flex-start',
+        alignItems: 'stretch',
+        flexWrap: 'nowrap',
+        gap: 16,
+        padding: 24,
+        width: { mode: '100%', val: 100, unit: '%' },
+        height: { mode: 'auto', val: 460, unit: 'px' }
+      })
+    };
+
+    function createContainerNode(id, label, overrides = {}) {
+      return {
+        id: id,
+        type: 'container',
+        label: label,
+        flexDirection: 'row',
+        justifyContent: 'flex-start',
+        alignItems: 'stretch',
+        flexWrap: 'nowrap',
+        gap: 12,
+        padding: 20,
+        grow: 0,
+        shrink: 1,
+        basis: 'auto',
+        alignSelf: 'auto',
+        order: 0,
+        width: { mode: '100%', val: 100, unit: '%' },
+        height: { mode: 'auto', val: 200, unit: 'px' },
+        children: [],
+        ...overrides
+      };
+    }
+
+    function createItemNode(id, label, overrides = {}) {
+      return {
+        id: id,
+        type: 'item',
+        label: label,
+        grow: 1,
+        shrink: 1,
+        basis: 'auto',
+        alignSelf: 'auto',
+        order: 0,
+        width: { mode: 'auto', val: 120, unit: 'px' },
+        height: { mode: 'auto', val: 80, unit: 'px' },
+        ...overrides
+      };
+    }
+
+    function findNodeById(node, id) {
+      if (node.id === id) return node;
+      if (node.children) {
+        for (let child of node.children) {
+          const found = findNodeById(child, id);
+          if (found) return found;
+        }
+      }
+      return null;
+    }
+
+    function findParentNode(node, childId) {
+      if (!node.children) return null;
+      for (let child of node.children) {
+        if (child.id === childId) return node;
+        const found = findParentNode(child, childId);
+        if (found) return found;
+      }
+      return null;
+    }
+
+    function getNodeBreadcrumbs(id, path = []) {
+      const parent = findParentNode(treeState.root, id);
+      const current = findNodeById(treeState.root, id);
+      if (!current) return path;
+
+      const newPath = [current, ...path];
+      if (parent) return getNodeBreadcrumbs(parent.id, newPath);
+      return newPath;
+    }
+
+    function calculateTreeDepth(node) {
+      if (!node.children || node.children.length === 0) return 1;
+      let maxChildDepth = 0;
+      for (let child of node.children) {
+        if (child.type === 'container') {
+          maxChildDepth = Math.max(maxChildDepth, calculateTreeDepth(child));
+        }
+      }
+      return 1 + maxChildDepth;
+    }
+
+    function sanitizeClassName(label) {
+      return label.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'box';
+    }
+
+    window.onload = function() {
+      loadPreset('appShell');
+      lucide.createIcons();
+    };
+
+    function selectNode(id) {
+      treeState.selectedId = id;
+      renderApp();
+    }
+
+    function switchInspectorTab(tab) {
+      const btnProp = document.getElementById('tab-btn-properties');
+      const btnTree = document.getElementById('tab-btn-tree');
+      const contentProp = document.getElementById('tab-content-properties');
+      const contentTree = document.getElementById('tab-content-tree');
+
+      if (tab === 'properties') {
+        btnProp.className = "px-4 py-2 text-xs font-semibold text-indigo-400 border-b-2 border-indigo-500";
+        btnTree.className = "px-4 py-2 text-xs font-semibold text-slate-400 hover:text-slate-200 border-b-2 border-transparent";
+        contentProp.classList.remove('hidden');
+        contentTree.classList.add('hidden');
+      } else {
+        btnTree.className = "px-4 py-2 text-xs font-semibold text-indigo-400 border-b-2 border-indigo-500";
+        btnProp.className = "px-4 py-2 text-xs font-semibold text-slate-400 hover:text-slate-200 border-b-2 border-transparent";
+        contentTree.classList.remove('hidden');
+        contentProp.classList.add('hidden');
+      }
+    }
+
+    function addChildContainer() {
+      const parent = findNodeById(treeState.root, treeState.selectedId);
+      if (!parent || parent.type !== 'container') {
+        alert("Please select a container node to add a child container inside.");
+        return;
+      }
+
+      const id = `container-${treeState.nextIdCounter++}`;
+      const child = createContainerNode(id, `Sub Container ${treeState.nextIdCounter - 1}`, {
+        flexDirection: 'row',
+        padding: 20,
+        gap: 12,
+        grow: 1,
+        width: { mode: '100%', val: 100, unit: '%' },
+        height: { mode: 'auto', val: 140, unit: 'px' }
+      });
+
+      parent.children.push(child);
+      selectNode(id);
+    }
+
+    function addLeafItem() {
+      const parent = findNodeById(treeState.root, treeState.selectedId);
+      if (!parent || parent.type !== 'container') {
+        alert("Please select a container node to add an item inside.");
+        return;
+      }
+
+      const id = `item-${treeState.nextIdCounter++}`;
+      const child = createItemNode(id, `Item Box ${treeState.nextIdCounter - 1}`, {
+        grow: 1,
+        height: { mode: 'custom', val: 70, unit: 'px' }
+      });
+
+      parent.children.push(child);
+      selectNode(id);
+    }
+
+    function deleteSelectedNode() {
+      if (treeState.selectedId === 'root') {
+        alert("Root container cannot be deleted.");
+        return;
+      }
+
+      const parent = findParentNode(treeState.root, treeState.selectedId);
+      if (parent) {
+        parent.children = parent.children.filter(child => child.id !== treeState.selectedId);
+        selectNode(parent.id);
+      }
+    }
+
+    function updateNodeProperty(prop, value) {
+      const node = findNodeById(treeState.root, treeState.selectedId);
+      if (!node) return;
+
+      node[prop] = value;
+      renderApp();
+    }
+
+    function handleDimensionModeChange(dim, mode) {
+      const node = findNodeById(treeState.root, treeState.selectedId);
+      if (!node) return;
+
+      node[dim].mode = mode;
+      renderApp();
+    }
+
+    function handleDimensionValueChange(dim) {
+      const node = findNodeById(treeState.root, treeState.selectedId);
+      if (!node) return;
+
+      const valInput = document.getElementById(`${dim}-val-input`);
+      const unitSelect = document.getElementById(`${dim}-unit-select`);
+
+      node[dim].val = parseFloat(valInput.value) || 0;
+      node[dim].unit = unitSelect.value;
+      renderApp();
+    }
+
+    function syncInspectorControls() {
+      const node = findNodeById(treeState.root, treeState.selectedId);
+      if (!node) return;
+
+      document.getElementById('selected-node-title').innerText = node.label;
+      document.getElementById('selected-type-badge').innerText = node.type;
+      document.getElementById('prop-label').value = node.label;
+
+      const btnDelete = document.getElementById('btn-delete-node');
+      btnDelete.style.display = (node.id === 'root') ? 'none' : 'block';
+
+      // Item rules
+      document.getElementById('prop-grow').value = node.grow || 0;
+      document.getElementById('prop-shrink').value = node.shrink ?? 1;
+      document.getElementById('prop-basis').value = node.basis || 'auto';
+      document.getElementById('prop-alignSelf').value = node.alignSelf || 'auto';
+      document.getElementById('prop-order').value = node.order || 0;
+
+      // Dimensions
+      ['width', 'height'].forEach(dim => {
+        const dObj = node[dim];
+        const modeSelect = document.getElementById(`${dim}-mode-select`);
+        const valInput = document.getElementById(`${dim}-val-input`);
+        const unitSelect = document.getElementById(`${dim}-unit-select`);
+        const summary = document.getElementById(`display-${dim}-summary`);
+
+        modeSelect.value = dObj.mode;
+        valInput.value = dObj.val;
+        unitSelect.value = dObj.unit;
+
+        const isCustom = dObj.mode === 'custom';
+        valInput.disabled = !isCustom;
+        unitSelect.disabled = !isCustom;
+
+        summary.innerText = (dObj.mode === 'custom') ? `${dObj.val}${dObj.unit}` : dObj.mode;
+      });
+
+      // Container Properties
+      const containerGroup = document.getElementById('container-properties-group');
+      if (node.type === 'container') {
+        containerGroup.style.display = 'block';
+
+        document.getElementById('label-flexDirection').innerText = node.flexDirection;
+        document.getElementById('prop-justifyContent').value = node.justifyContent;
+        document.getElementById('prop-alignItems').value = node.alignItems;
+        document.getElementById('prop-flexWrap').value = node.flexWrap;
+
+        document.getElementById('prop-gap').value = node.gap;
+        document.getElementById('display-gap-val').innerText = `${node.gap}px`;
+
+        document.getElementById('prop-padding').value = node.padding;
+        document.getElementById('display-padding-val').innerText = `${node.padding}px`;
+
+        updateDirectionButtonsUI(node.flexDirection);
+        updateAxisVisualizerDesc(node.flexDirection);
+      } else {
+        containerGroup.style.display = 'none';
+      }
+
+      // Breadcrumbs
+      const breadcrumbs = getNodeBreadcrumbs(node.id);
+      const breadcrumbContainer = document.getElementById('breadcrumb-container');
+      breadcrumbContainer.innerHTML = breadcrumbs.map((bNode, idx) => `
+        <span onclick="selectNode('${bNode.id}')" class="cursor-pointer hover:text-indigo-300 transition-colors ${bNode.id === node.id ? 'font-bold text-white underline underline-offset-4 decoration-indigo-500' : ''}">
+          ${bNode.label}
+        </span>
+        ${idx < breadcrumbs.length - 1 ? '<span class="text-slate-600">/</span>' : ''}
+      `).join('');
+    }
+
+    function updateDirectionButtonsUI(dir) {
+      const buttons = ['row', 'row-reverse', 'column', 'column-reverse'];
+      buttons.forEach(d => {
+        const btn = document.getElementById(`btn-dir-${d}`);
+        if (!btn) return;
+        if (d === dir) {
+          btn.className = "dir-opt-btn px-2 py-1.5 text-xs rounded-lg border transition-all flex items-center justify-center space-x-1 bg-indigo-600 border-indigo-500 text-white font-semibold shadow";
+        } else {
+          btn.className = "dir-opt-btn px-2 py-1.5 text-xs rounded-lg border transition-all flex items-center justify-center space-x-1 bg-slate-900 border-slate-700 text-slate-300 hover:border-slate-500";
+        }
+      });
+    }
+
+    function updateAxisVisualizerDesc(dir) {
+      const mainLabel = document.getElementById('axis-main-label');
+      const crossLabel = document.getElementById('axis-cross-label');
+
+      switch (dir) {
+        case 'row':
+          mainLabel.innerText = 'Left → Right';
+          crossLabel.innerText = 'Top → Bottom';
+          break;
+        case 'row-reverse':
+          mainLabel.innerText = 'Right → Left';
+          crossLabel.innerText = 'Top → Bottom';
+          break;
+        case 'column':
+          mainLabel.innerText = 'Top → Bottom';
+          crossLabel.innerText = 'Left → Right';
+          break;
+        case 'column-reverse':
+          mainLabel.innerText = 'Bottom → Top';
+          crossLabel.innerText = 'Left → Right';
+          break;
+      }
+    }
+
+    function renderVisualCanvas() {
+      const rootCanvas = document.getElementById('visual-canvas-root');
+      rootCanvas.innerHTML = '';
+      rootCanvas.appendChild(renderContainerElement(treeState.root, 0));
+      document.getElementById('tree-depth-indicator').innerText = `Nesting Depth: ${calculateTreeDepth(treeState.root)}`;
+    }
+
+    function renderContainerElement(node, depth) {
+      const isSelected = node.id === treeState.selectedId;
+      const levelStyle = LEVEL_STYLES[depth % LEVEL_STYLES.length];
+
+      const div = document.createElement('div');
+      div.className = `nested-container rounded-2xl transition-all relative ${levelStyle.bg} ${levelStyle.border} border-2 ${
+        isSelected ? 'ring-2 ring-indigo-400 border-white z-10 shadow-2xl' : 'hover:border-slate-400'
+      } flex flex-col`;
+
+      div.style.flexGrow = node.grow;
+      div.style.flexShrink = node.shrink;
+      div.style.flexBasis = node.basis;
+      div.style.alignSelf = node.alignSelf;
+      div.style.order = node.order;
+
+      div.style.width = (node.width.mode === 'custom') ? `${node.width.val}${node.width.unit}` : node.width.mode;
+      div.style.height = (node.height.mode === 'custom') ? `${node.height.val}${node.height.unit}` : node.height.mode;
+
+      div.onclick = (e) => {
+        e.stopPropagation();
+        selectNode(node.id);
+      };
+
+      // Dedicated Header Bar for Container Name and Details (Prevents overlap with child elements)
+      const headerBar = document.createElement('div');
+      headerBar.className = `w-full px-3 py-1.5 rounded-t-xl ${levelStyle.headerBg} border-b border-slate-800 flex items-center justify-between z-20 cursor-pointer`;
+      
+      headerBar.innerHTML = `
+        <div class="flex items-center space-x-2 truncate">
+          <i data-lucide="folder" class="w-3.5 h-3.5 ${levelStyle.text}"></i>
+          <span class="text-xs font-bold text-white font-mono truncate">${node.label}</span>
+          <span class="text-[10px] font-mono opacity-60 text-slate-300">(${node.flexDirection})</span>
+        </div>
+        <div class="flex items-center space-x-1">
+          ${isSelected ? '<span class="text-[9px] font-bold bg-indigo-500 text-white px-1.5 py-0.5 rounded">ACTIVE</span>' : ''}
+        </div>
+      `;
+
+      div.appendChild(headerBar);
+
+      // Child Items Wrapper Container (With explicit padding for comfortable breathing room)
+      const contentWrapper = document.createElement('div');
+      contentWrapper.className = 'w-full h-full flex flex-1 overflow-auto';
+      contentWrapper.style.display = 'flex';
+      contentWrapper.style.flexDirection = node.flexDirection;
+      contentWrapper.style.justifyContent = node.justifyContent;
+      contentWrapper.style.alignItems = node.alignItems;
+      contentWrapper.style.flexWrap = node.flexWrap;
+      contentWrapper.style.gap = `${node.gap}px`;
+      contentWrapper.style.padding = `${node.padding}px`;
+
+      if (node.children) {
+        node.children.forEach(child => {
+          if (child.type === 'container') {
+            contentWrapper.appendChild(renderContainerElement(child, depth + 1));
+          } else {
+            contentWrapper.appendChild(renderItemElement(child));
+          }
+        });
+      }
+
+      div.appendChild(contentWrapper);
+      return div;
+    }
+
+    function renderItemElement(node) {
+      const isSelected = node.id === treeState.selectedId;
+
+      const div = document.createElement('div');
+      div.className = `rounded-xl p-3 transition-all relative bg-gradient-to-br from-slate-800 to-slate-900 border ${
+        isSelected ? 'border-white ring-2 ring-emerald-400 scale-[1.01] z-10 shadow-lg' : 'border-slate-700 hover:border-slate-500'
+      } flex flex-col justify-between cursor-pointer min-h-[60px]`;
+
+      div.style.flexGrow = node.grow;
+      div.style.flexShrink = node.shrink;
+      div.style.flexBasis = node.basis;
+      div.style.alignSelf = node.alignSelf;
+      div.style.order = node.order;
+
+      div.style.width = (node.width.mode === 'custom') ? `${node.width.val}${node.width.unit}` : node.width.mode;
+      div.style.height = (node.height.mode === 'custom') ? `${node.height.val}${node.height.unit}` : node.height.mode;
+
+      div.onclick = (e) => {
+        e.stopPropagation();
+        selectNode(node.id);
+      };
+
+      div.innerHTML = `
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-emerald-300 font-mono flex items-center space-x-1">
+            <i data-lucide="box" class="w-3 h-3"></i>
+            <span>${node.label}</span>
+          </span>
+          ${isSelected ? '<span class="text-[9px] bg-emerald-500 text-slate-950 px-1 font-bold rounded">ACTIVE</span>' : ''}
+        </div>
+        <div class="text-[10px] font-mono text-slate-400 mt-1">
+          flex: ${node.grow} ${node.shrink} ${node.basis}
+        </div>
+      `;
+
+      return div;
+    }
+
+    function renderHierarchyTree() {
+      const container = document.getElementById('tree-nodes-container');
+      container.innerHTML = '';
+      container.appendChild(renderTreeNodeRecursive(treeState.root));
+    }
+
+    function renderTreeNodeRecursive(node) {
+      const isSelected = node.id === treeState.selectedId;
+      const wrap = document.createElement('div');
+      wrap.className = 'space-y-1';
+
+      const row = document.createElement('div');
+      row.className = `flex items-center space-x-2 px-2.5 py-1.5 rounded-lg text-xs font-mono cursor-pointer border ${
+        isSelected ? 'bg-indigo-600/30 border-indigo-500 text-white font-bold' : 'hover:bg-slate-800/60 border-transparent text-slate-300'
+      }`;
+      row.onclick = () => selectNode(node.id);
+
+      const icon = node.type === 'container' ? 'folder' : 'box';
+      row.innerHTML = `<i data-lucide="${icon}" class="w-3.5 h-3.5 ${node.type === 'container' ? 'text-indigo-400' : 'text-emerald-400'}"></i><span>${node.label}</span>`;
+
+      wrap.appendChild(row);
+
+      if (node.children && node.children.length > 0) {
+        const childContainer = document.createElement('div');
+        childContainer.className = 'pl-4 border-l border-slate-800 space-y-1 ml-2';
+        node.children.forEach(child => {
+          childContainer.appendChild(renderTreeNodeRecursive(child));
+        });
+        wrap.appendChild(childContainer);
+      }
+
+      return wrap;
+    }
+
+    function renderCodeExport() {
+      const codeOutput = document.getElementById('code-output-block');
+
+      let htmlCode = '';
+      let cssCode = '';
+
+      function generateRecursiveCode(node, depth = 0) {
+        const indent = '  '.repeat(depth);
+        const className = sanitizeClassName(node.label);
+
+        if (node.type === 'container') {
+          htmlCode += `${indent}<div class="flex-container ${className}">\n`;
+          
+          cssCode += `.${className} {\n`;
+          cssCode += `  display: flex;\n`;
+          cssCode += `  flex-direction: ${node.flexDirection};\n`;
+          cssCode += `  justify-content: ${node.justifyContent};\n`;
+          cssCode += `  align-items: ${node.alignItems};\n`;
+          cssCode += `  flex-wrap: ${node.flexWrap};\n`;
+          cssCode += `  gap: ${node.gap}px;\n`;
+          cssCode += `  padding: ${node.padding}px;\n`;
+          if (node.grow !== 0) cssCode += `  flex-grow: ${node.grow};\n`;
+          if (node.width.mode !== 'auto') cssCode += `  width: ${(node.width.mode === 'custom') ? `${node.width.val}${node.width.unit}` : node.width.mode};\n`;
+          if (node.height.mode !== 'auto') cssCode += `  height: ${(node.height.mode === 'custom') ? `${node.height.val}${node.height.unit}` : node.height.mode};\n`;
+          cssCode += `}\n\n`;
+
+          if (node.children) {
+            node.children.forEach(child => generateRecursiveCode(child, depth + 1));
+          }
+
+          htmlCode += `${indent}</div>\n`;
+        } else {
+          htmlCode += `${indent}<div class="flex-item ${className}">${node.label}</div>\n`;
+
+          cssCode += `.${className} {\n`;
+          cssCode += `  flex: ${node.grow} ${node.shrink} ${node.basis};\n`;
+          if (node.width.mode !== 'auto') cssCode += `  width: ${node.width.val}${node.width.unit};\n`;
+          if (node.height.mode !== 'auto') cssCode += `  height: ${node.height.val}${node.height.unit};\n`;
+          cssCode += `}\n\n`;
+        }
+      }
+
+      generateRecursiveCode(treeState.root);
+
+      const formatted = `<span class="text-indigo-400">&lt;!-- Generated HTML --&gt;</span>\n${escapeHtml(htmlCode)}\n<span class="text-indigo-400">/* Generated CSS Styles */</span>\n${escapeHtml(cssCode)}`;
+      codeOutput.innerHTML = formatted;
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    function renderApp() {
+      syncInspectorControls();
+      renderVisualCanvas();
+      renderHierarchyTree();
+      renderCodeExport();
+      lucide.createIcons();
+    }
+
+    function loadPreset(key) {
+      if (key === 'appShell') {
+        treeState.root = createContainerNode('root', 'App Shell Root', {
+          flexDirection: 'row',
+          padding: 0,
+          gap: 0,
+          height: { mode: 'custom', val: 460, unit: 'px' }
+        });
+        const sidebar = createContainerNode('sidebar', 'Navigation Sidebar', {
+          flexDirection: 'column',
+          width: { mode: 'custom', val: 220, unit: 'px' },
+          padding: 16,
+          gap: 10
+        });
+        sidebar.children = [
+          createItemNode('logo', 'Brand Logo', { height: { mode: 'custom', val: 44, unit: 'px' }, grow: 0 }),
+          createItemNode('menu-1', 'Dashboard Link', { height: { mode: 'custom', val: 38, unit: 'px' }, grow: 0 }),
+          createItemNode('menu-2', 'Settings Link', { height: { mode: 'custom', val: 38, unit: 'px' }, grow: 0 })
+        ];
+
+        const mainArea = createContainerNode('main-area', 'Main Content Wrapper', {
+          flexDirection: 'column',
+          grow: 1,
+          padding: 16,
+          gap: 16
+        });
+        const navbar = createItemNode('top-nav', 'Header Navbar', { height: { mode: 'custom', val: 50, unit: 'px' }, grow: 0 });
+        const dashboard = createContainerNode('dash-grid', 'Dashboard Panel', { flexDirection: 'row', grow: 1, gap: 12, padding: 16 });
+        dashboard.children = [
+          createItemNode('card-a', 'Analytics Widget', { grow: 1 }),
+          createItemNode('card-b', 'Activity Stream', { grow: 1 })
+        ];
+
+        mainArea.children = [navbar, dashboard];
+        treeState.root.children = [sidebar, mainArea];
+      } else if (key === 'holyGrail') {
+        treeState.root = createContainerNode('root', 'Holy Grail Container', {
+          flexDirection: 'column',
+          padding: 16,
+          gap: 12,
+          height: { mode: 'custom', val: 460, unit: 'px' }
+        });
+        const header = createItemNode('header', 'Header Banner', { grow: 0, height: { mode: 'custom', val: 60, unit: 'px' } });
+        const body = createContainerNode('body-wrap', 'Main Body Row', { flexDirection: 'row', grow: 1, gap: 12, padding: 12 });
+        const sidebarLeft = createItemNode('nav-left', 'Nav Menu', { grow: 0, width: { mode: 'custom', val: 160, unit: 'px' } });
+        const content = createItemNode('main-content', 'Central Content', { grow: 1 });
+        const sidebarRight = createItemNode('aside-right', 'Right Sidebar', { grow: 0, width: { mode: 'custom', val: 140, unit: 'px' } });
+        const footer = createItemNode('footer', 'Footer Area', { grow: 0, height: { mode: 'custom', val: 48, unit: 'px' } });
+
+        body.children = [sidebarLeft, content, sidebarRight];
+        treeState.root.children = [header, body, footer];
+      } else if (key === 'cardDashboard') {
+        treeState.root = createContainerNode('root', 'Dashboard Layout', {
+          flexDirection: 'column',
+          padding: 16,
+          gap: 16,
+          height: { mode: 'custom', val: 460, unit: 'px' }
+        });
+        const row1 = createContainerNode('row-1', 'Stats Overview Row', { flexDirection: 'row', gap: 12, grow: 0, padding: 12 });
+        row1.children = [
+          createItemNode('stat-1', 'Revenue Card', { grow: 1, height: { mode: 'custom', val: 80, unit: 'px' } }),
+          createItemNode('stat-2', 'Users Card', { grow: 1, height: { mode: 'custom', val: 80, unit: 'px' } }),
+          createItemNode('stat-3', 'Orders Card', { grow: 1, height: { mode: 'custom', val: 80, unit: 'px' } })
+        ];
+
+        const row2 = createContainerNode('row-2', 'Detailed Visuals', { flexDirection: 'row', gap: 12, grow: 1, padding: 12 });
+        row2.children = [
+          createItemNode('chart', 'Bar Chart Panel', { grow: 2 }),
+          createItemNode('feed', 'Recent Logs', { grow: 1 })
+        ];
+
+        treeState.root.children = [row1, row2];
+      }
+
+      selectNode('root');
+    }
+
+    function resetTree() {
+      treeState.root = createContainerNode('root', 'Root Container', {
+        flexDirection: 'column',
+        justifyContent: 'flex-start',
+        alignItems: 'stretch',
+        flexWrap: 'nowrap',
+        gap: 16,
+        padding: 24,
+        width: { mode: '100%', val: 100, unit: '%' },
+        height: { mode: 'auto', val: 460, unit: 'px' }
+      });
+      selectNode('root');
+    }
+
+    function copyExportedCode() {
+      const codeOutput = document.getElementById('code-output-block');
+      const text = codeOutput.innerText;
+
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+
+      const label = document.getElementById('copy-btn-label');
+      label.innerText = 'Copied!';
+      setTimeout(() => label.innerText = 'Copy Code', 2000);
+    }
+  </script>
+</body>
+</html>
